@@ -1,0 +1,32 @@
+export function Spinner({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      className={`animate-spin text-current ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+      <path
+        className="opacity-90"
+        fill="currentColor"
+        d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4Z"
+      />
+    </svg>
+  );
+}
+
+export function LoadingState({ label = "ກຳລັງໂຫຼດ..." }: { label?: string }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 py-24 text-text-secondary">
+      <Spinner className="h-8 w-8" />
+      <p className="text-sm">{label}</p>
+    </div>
+  );
+}

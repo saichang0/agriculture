@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+:root {
+  /* Base surfaces */
+  --color-page-bg: #f7f3ee;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3efe9;
+  --color-border: #e8e2d9;
+
+  /* Sidebar (always dark, regardless of light/dark mode) */
+  --color-sidebar-bg: #1a1d27;
+  --color-sidebar-bg-hover: #232733;
+  --color-sidebar-bg-active: #2a2f3d;
+  --color-sidebar-text: #a6acbb;
+  --color-sidebar-text-active: #ffffff;
+  --color-sidebar-border: #2a2f3d;
+
+  /* Text */
+  --color-text-primary: #1a1d27;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+
+  /* Brand / primary action */
+  --color-primary: #1a1d27;
+  --color-primary-hover: #2a2f3d;
+  --color-primary-text: #ffffff;
+
+  /* Status */
+  --color-success: #16a34a;
+  --color-success-bg: #eafbf1;
+  --color-warning: #d97706;
+  --color-warning-bg: #fef6e7;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fdecec;
+  --color-info: #2563eb;
+  --color-info-bg: #eaf1fe;
+
+  /* Radii */
+  --radius-card: 1rem;
+  --radius-control: 0.625rem;
+  --radius-pill: 999px;
+}
+
+@theme inline {
+  --color-page-bg: var(--color-page-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-muted: var(--color-surface-muted);
+  --color-border: var(--color-border);
+
+  --color-sidebar-bg: var(--color-sidebar-bg);
+  --color-sidebar-bg-hover: var(--color-sidebar-bg-hover);
+  --color-sidebar-bg-active: var(--color-sidebar-bg-active);
+  --color-sidebar-text: var(--color-sidebar-text);
+  --color-sidebar-text-active: var(--color-sidebar-text-active);
+  --color-sidebar-border: var(--color-sidebar-border);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-text: var(--color-primary-text);
+
+  --color-success: var(--color-success);
+  --color-success-bg: var(--color-success-bg);
+  --color-warning: var(--color-warning);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-danger: var(--color-danger);
+  --color-danger-bg: var(--color-danger-bg);
+  --color-info: var(--color-info);
+  --color-info-bg: var(--color-info-bg);
+
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+  --radius-pill: var(--radius-pill);
+
+  --font-sans: var(--font-noto-lao);
+}
+
+body {
+  background: var(--color-page-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@keyframes toast-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-circle {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes toast-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
