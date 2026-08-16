@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { NumberInput } from "@/components/ui/NumberInput";
+import { RemoteScanButton } from "@/components/ui/RemoteScanButton";
 import { Product } from "@/lib/products-queries";
 
 interface DamagedProductFormDialogProps {
@@ -30,6 +31,7 @@ export function DamagedProductFormDialog({
   const [quantityStr, setQuantityStr] = useState("");
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -38,6 +40,7 @@ export function DamagedProductFormDialog({
       setQuantityStr("");
       setReason("");
       setNote("");
+      setScanNotice(null);
     }
   }, [open]);
 
@@ -50,6 +53,17 @@ export function DamagedProductFormDialog({
     if (!productSearch.trim()) return true;
     return p.name.toLowerCase().includes(productSearch.trim().toLowerCase());
   });
+
+  function handleScan(code: string) {
+    const match = products.find((p) => p.barcode === code);
+    if (match) {
+      setSelectedProduct(match);
+      setScanNotice(null);
+    } else {
+      setScanNotice(`ບໍ່ພົບສິນຄ້າສຳລັບລະຫັດ ${code}`);
+      setTimeout(() => setScanNotice(null), 2500);
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -95,12 +109,21 @@ export function DamagedProductFormDialog({
               </button>
             ) : (
               <>
-                <Input
-                  autoFocus
-                  placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ..."
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="min-w-0 flex-1"
+                  />
+                  <RemoteScanButton onScan={handleScan} />
+                </div>
+                {scanNotice && (
+                  <div className="rounded-control bg-danger-bg px-3.5 py-2.5 text-sm text-danger">
+                    {scanNotice}
+                  </div>
+                )}
                 <div className="flex max-h-48 flex-col overflow-y-auto rounded-control border border-border">
                   {filteredProducts.length === 0 ? (
                     <p className="p-3 text-center text-sm text-text-secondary">ບໍ່ພົບສິນຄ້າ</p>

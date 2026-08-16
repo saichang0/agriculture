@@ -18,6 +18,7 @@ import { CreatableSelect } from "@/components/ui/CreatableSelect";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { LoadingState } from "@/components/ui/Spinner";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { RemoteScanButton } from "@/components/ui/RemoteScanButton";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <h2 className="text-sm font-semibold text-text-primary">{children}</h2>;
@@ -164,12 +165,18 @@ export default function EditProductPage() {
                     return res.createUnit;
                   }}
                 />
-                <Input
-                  label="Barcode"
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  placeholder="ບໍ່ບັງຄັບ"
-                />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-text-secondary">Barcode</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={barcode}
+                      onChange={(e) => setBarcode(e.target.value)}
+                      placeholder="ບໍ່ບັງຄັບ"
+                      className="min-w-0 flex-1"
+                    />
+                    <RemoteScanButton onScan={setBarcode} />
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">

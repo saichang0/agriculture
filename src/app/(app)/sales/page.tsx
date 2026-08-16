@@ -7,7 +7,7 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { PRODUCTS_PAGE_DATA } from "@/lib/products-queries";
 import { SALES_PAGE_DATA, CREATE_SALE, CREATE_CUSTOMER } from "@/lib/sales-queries";
 import { SALE_BY_ID, UPDATE_SALE } from "@/lib/sales-history-queries";
-import { useCart, computeLinePrice } from "@/lib/useCart";
+import { useCart, computeLinePrice, CartLine } from "@/lib/useCart";
 import { useBarcodeScanner } from "@/lib/useBarcodeScanner";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +16,8 @@ import { LoadingState } from "@/components/ui/Spinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Toast } from "@/components/ui/Toast";
 import { CheckoutDialog } from "@/components/sales/CheckoutDialog";
+import { CameraScannerDialog } from "@/components/sales/CameraScannerDialog";
+import { RemoteScanButton } from "@/components/ui/RemoteScanButton";
 
 function formatMoney(n: number) {
   return n.toLocaleString("lo-LA");
@@ -37,6 +39,19 @@ function IconGrid() {
   );
 }
 
+function IconCamera() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" stroke="currentColor" className="h-4 w-4">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23H3.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h17a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-1.686a2.25 2.25 0 0 1-1.64-1.055l-.822-1.316a2.25 2.25 0 0 0-1.909-1.054H9.583a2.25 2.25 0 0 0-1.91 1.054l-.822 1.316Z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
+    </svg>
+  );
+}
+
 function ProductNoImage() {
   return (
     <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-6 w-6 text-text-muted">
@@ -46,6 +61,133 @@ function ProductNoImage() {
         d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
       />
     </svg>
+  );
+}
+
+interface CartContentProps {
+  lines: CartLine[];
+  total: number;
+  editSaleId: string | null;
+  savingEdit: boolean;
+  updateError: { message: string } | null | undefined;
+  onSetQuantity: (productId: string, quantity: number) => void;
+  onRemoveLine: (productId: string) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: () => void;
+  onCheckout: () => void;
+}
+
+function CartContent({
+  lines,
+  total,
+  editSaleId,
+  savingEdit,
+  updateError,
+  onSetQuantity,
+  onRemoveLine,
+  onCancelEdit,
+  onSaveEdit,
+  onCheckout,
+}: CartContentProps) {
+  return (
+    <>
+      {editSaleId && (
+        <div className="mx-5 mt-3 shrink-0 rounded-control bg-info-bg px-3.5 py-2.5 text-sm text-info">
+          ກຳລັງແກ້ໄຂໃບບິນ — ເພີ່ມ ຫຼື ເອົາສິນຄ້າອອກ ແລ້ວກົດ &ldquo;ບັນທຶກການແກ້ໄຂ&rdquo;
+        </div>
+      )}
+
+      {lines.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center py-10">
+          <EmptyState title="ຍັງບໍ່ມີສິນຄ້າ" description="ກົດເລືອກສິນຄ້າ ຫຼື ສະແກນ barcode" />
+        </div>
+      ) : (
+        <div className="mt-3 px-5">
+          <table className="w-full text-left text-sm">
+            <thead className="sticky top-0 bg-surface">
+              <tr className="border-b border-border text-xs text-text-secondary">
+                <th className="pb-2 font-medium">ສິນຄ້າ</th>
+                <th className="w-28 pb-2 text-center font-medium">ຈຳນວນ</th>
+                <th className="w-24 pb-2 text-right font-medium">ລາຄາ</th>
+                <th className="w-6 pb-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((line) => {
+                const { unitPrice, priceType, subtotal } = computeLinePrice(line.product, line.quantity);
+                return (
+                  <tr key={line.product.id} className="border-b border-border last:border-0">
+                    <td className="py-2.5 pr-2 align-top">
+                      <div className="text-sm font-medium text-text-primary">{line.product.name}</div>
+                      <div className="text-xs text-text-secondary">
+                        {formatMoney(unitPrice)} ກີບ/{priceType === "WHOLESALE" ? "ສົ່ງ" : "ຍ່ອຍ"}
+                      </div>
+                    </td>
+                    <td className="py-2.5 align-top">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onSetQuantity(line.product.id, line.quantity - 1)}
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary hover:bg-surface-muted"
+                        >
+                          −
+                        </button>
+                        <span className="w-5 text-center text-sm text-text-primary">{line.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => onSetQuantity(line.product.id, line.quantity + 1)}
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary hover:bg-surface-muted"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </td>
+                    <td className="py-2.5 text-right align-top text-sm font-medium text-text-primary">
+                      {formatMoney(subtotal)}
+                    </td>
+                    <td className="py-2.5 align-top">
+                      <button
+                        type="button"
+                        onClick={() => onRemoveLine(line.product.id)}
+                        className="text-text-muted hover:text-danger"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="shrink-0 border-t border-border p-5">
+        <div className="flex items-center justify-between text-base font-semibold text-text-primary">
+          <span>ລວມ</span>
+          <span>{formatMoney(total)} ກີບ</span>
+        </div>
+        {updateError && (
+          <div className="mt-3 rounded-control bg-danger-bg px-3.5 py-2.5 text-sm text-danger">
+            {updateError.message}
+          </div>
+        )}
+        {editSaleId ? (
+          <div className="mt-4 flex gap-3">
+            <Button variant="secondary" fullWidth size="lg" onClick={onCancelEdit} disabled={savingEdit}>
+              ຍົກເລີກ
+            </Button>
+            <Button fullWidth size="lg" disabled={lines.length === 0 || savingEdit} onClick={onSaveEdit}>
+              {savingEdit ? "ກຳລັງບັນທຶກ..." : "ບັນທຶກການແກ້ໄຂ"}
+            </Button>
+          </div>
+        ) : (
+          <Button fullWidth size="lg" className="mt-4" disabled={lines.length === 0} onClick={onCheckout}>
+            ຊຳລະ
+          </Button>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -74,6 +216,8 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [cameraScannerOpen, setCameraScannerOpen] = useState(false);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
   const [hydratedEditId, setHydratedEditId] = useState<string | null>(null);
@@ -129,6 +273,14 @@ export default function SalesPage() {
   );
 
   useBarcodeScanner(handleScan);
+
+  const handleCameraScan = useCallback(
+    (code: string) => {
+      setCameraScannerOpen(false);
+      handleScan(code);
+    },
+    [handleScan]
+  );
 
   const filtered = products.filter((p) => {
     if (categoryId && p.categoryId !== categoryId) return false;
@@ -188,17 +340,28 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden lg:flex-row">
       {/* Left: products */}
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-24 sm:p-6 lg:pb-6">
         <div className="flex items-center gap-3">
-          <div className="max-w-sm flex-1">
+          <div className="min-w-0 flex-1 lg:max-w-sm">
             <Input
               placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
+          <button
+            type="button"
+            onClick={() => setCameraScannerOpen(true)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-muted"
+            title="ສະແກນດ້ວຍກ້ອງ"
+          >
+            <IconCamera />
+          </button>
+
+          <RemoteScanButton onScan={handleScan} />
 
           <button
             type="button"
@@ -269,14 +432,14 @@ export default function SalesPage() {
           </div>
         ) : (
           <div className="flex flex-col overflow-hidden rounded-card border border-border bg-surface">
-            <div className="flex items-center gap-4 border-b border-border bg-surface-muted px-4 py-2.5 text-xs font-medium text-text-secondary">
+            <div className="hidden items-center gap-4 border-b border-border bg-surface-muted px-4 py-2.5 text-xs font-medium text-text-secondary sm:flex">
               <div className="w-11 shrink-0" />
               <div className="min-w-0 flex-1">ສິນຄ້າ</div>
-              <div className="w-32 shrink-0 text-right">ປະເພດ</div>
+              <div className="hidden w-32 shrink-0 text-right md:block">ປະເພດ</div>
               <div className="w-32 shrink-0 text-right">ລາຄາຍ່ອຍ</div>
-              <div className="w-32 shrink-0 text-right">ລາຄາສົ່ງ</div>
+              <div className="hidden w-32 shrink-0 text-right md:block">ລາຄາສົ່ງ</div>
               <div className="w-28 shrink-0 text-right">ຈຳນວນ</div>
-              <div className="w-24 shrink-0 text-right">ສະຖານະ</div>
+              <div className="hidden w-24 shrink-0 text-right sm:block">ສະຖານະ</div>
             </div>
 
             {filtered.map((p) => (
@@ -285,7 +448,7 @@ export default function SalesPage() {
                 type="button"
                 onClick={() => cart.addProduct(p)}
                 disabled={p.stockQty <= 0}
-                className="flex w-full items-center gap-4 border-b border-border px-4 py-3 text-left transition-colors last:border-0 hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-0 hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50 sm:gap-4 sm:px-4"
               >
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-surface-muted">
                   {p.imageUrl ? (
@@ -296,27 +459,30 @@ export default function SalesPage() {
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-sm font-medium text-text-primary">{p.name}</span>
-                </div>
-                <div>
-                    <span className="truncate text-xs text-text-secondary">
+                  <span className="text-xs text-text-secondary sm:hidden">
                     {categoryById.get(p.categoryId) ?? "-"}
                   </span>
                 </div>
-                <div className="w-32 shrink-0 text-right text-sm font-semibold text-text-primary">
+                <div className="hidden w-32 shrink-0 text-right md:block">
+                  <span className="truncate text-xs text-text-secondary">
+                    {categoryById.get(p.categoryId) ?? "-"}
+                  </span>
+                </div>
+                <div className="w-24 shrink-0 text-right text-sm font-semibold text-text-primary sm:w-32">
                   {formatMoney(p.retailPrice)} ກີບ
                 </div>
 
-                <div className="w-32 shrink-0 text-right text-xs text-text-secondary">
+                <div className="hidden w-32 shrink-0 text-right text-xs text-text-secondary md:block">
                   {formatMoney(p.wholesalePrice)} ກີບ
                   <br />
                   (≥{p.wholesaleMinQty} ຫົວໜ່ວຍ)
                 </div>
 
-                <div className="w-28 shrink-0 text-right text-sm text-text-primary">
-                  {formatMoney(p.stockQty)} ຫົວໜ່ວຍ
+                <div className="w-16 shrink-0 text-right text-sm text-text-primary sm:w-28">
+                  {formatMoney(p.stockQty)}
                 </div>
 
-                <div className="flex w-24 shrink-0 justify-end">
+                <div className="hidden w-24 shrink-0 justify-end sm:flex">
                   {p.stockQty <= 0 ? (
                     <Badge tone="danger">ໝົດ</Badge>
                   ) : p.stockQty <= p.minStockAlert ? (
@@ -331,132 +497,70 @@ export default function SalesPage() {
         )}
       </div>
 
-      {/* Right: cart — the whole panel scrolls as one unit so the checkout
-          button is always reachable, even on a short window. */}
-      <div className="flex h-full w-full max-w-md shrink-0 flex-col overflow-y-auto border-l border-border bg-surface">
+      {/* Right: cart — desktop/tablet only, always visible. The whole panel
+          scrolls as one unit so the checkout button is always reachable. */}
+      <div className="hidden h-full w-full max-w-md shrink-0 flex-col overflow-y-auto border-l border-border bg-surface lg:flex">
         <h2 className="shrink-0 px-5 pt-5 text-lg font-semibold text-text-primary">ກະຕ່າ</h2>
-
-        {editSaleId && (
-          <div className="mx-5 mt-3 shrink-0 rounded-control bg-info-bg px-3.5 py-2.5 text-sm text-info">
-            ກຳລັງແກ້ໄຂໃບບິນ — ເພີ່ມ ຫຼື ເອົາສິນຄ້າອອກ ແລ້ວກົດ &ldquo;ບັນທຶກການແກ້ໄຂ&rdquo;
-          </div>
-        )}
-
-        {cart.lines.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center py-10">
-            <EmptyState title="ຍັງບໍ່ມີສິນຄ້າ" description="ກົດເລືອກສິນຄ້າ ຫຼື ສະແກນ barcode" />
-          </div>
-        ) : (
-          <div className="mt-3 px-5">
-            <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 bg-surface">
-                <tr className="border-b border-border text-xs text-text-secondary">
-                  <th className="pb-2 font-medium">ສິນຄ້າ</th>
-                  <th className="w-28 pb-2 text-center font-medium">ຈຳນວນ</th>
-                  <th className="w-24 pb-2 text-right font-medium">ລາຄາ</th>
-                  <th className="w-6 pb-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {cart.lines.map((line) => {
-                  const { unitPrice, priceType, subtotal } = computeLinePrice(
-                    line.product,
-                    line.quantity
-                  );
-                  return (
-                    <tr key={line.product.id} className="border-b border-border last:border-0">
-                      <td className="py-2.5 pr-2 align-top">
-                        <div className="text-sm font-medium text-text-primary">
-                          {line.product.name}
-                        </div>
-                        <div className="text-xs text-text-secondary">
-                          {formatMoney(unitPrice)} ກີບ/{priceType === "WHOLESALE" ? "ສົ່ງ" : "ຍ່ອຍ"}
-                        </div>
-                      </td>
-                      <td className="py-2.5 align-top">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => cart.setQuantity(line.product.id, line.quantity - 1)}
-                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary hover:bg-surface-muted"
-                          >
-                            −
-                          </button>
-                          <span className="w-5 text-center text-sm text-text-primary">
-                            {line.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => cart.setQuantity(line.product.id, line.quantity + 1)}
-                            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary hover:bg-surface-muted"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </td>
-                      <td className="py-2.5 text-right align-top text-sm font-medium text-text-primary">
-                        {formatMoney(subtotal)}
-                      </td>
-                      <td className="py-2.5 align-top">
-                        <button
-                          type="button"
-                          onClick={() => cart.removeLine(line.product.id)}
-                          className="text-text-muted hover:text-danger"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="shrink-0 border-t border-border p-5">
-          <div className="flex items-center justify-between text-base font-semibold text-text-primary">
-            <span>ລວມ</span>
-            <span>{formatMoney(cart.total)} ກີບ</span>
-          </div>
-          {updateError && (
-            <div className="mt-3 rounded-control bg-danger-bg px-3.5 py-2.5 text-sm text-danger">
-              {updateError.message}
-            </div>
-          )}
-          {editSaleId ? (
-            <div className="mt-4 flex gap-3">
-              <Button
-                variant="secondary"
-                fullWidth
-                size="lg"
-                onClick={handleCancelEdit}
-                disabled={savingEdit}
-              >
-                ຍົກເລີກ
-              </Button>
-              <Button
-                fullWidth
-                size="lg"
-                disabled={cart.lines.length === 0 || savingEdit}
-                onClick={handleSaveEdit}
-              >
-                {savingEdit ? "ກຳລັງບັນທຶກ..." : "ບັນທຶກການແກ້ໄຂ"}
-              </Button>
-            </div>
-          ) : (
-            <Button
-              fullWidth
-              size="lg"
-              className="mt-4"
-              disabled={cart.lines.length === 0}
-              onClick={() => setCheckoutOpen(true)}
-            >
-              ຊຳລະ
-            </Button>
-          )}
-        </div>
+        <CartContent
+          lines={cart.lines}
+          total={cart.total}
+          editSaleId={editSaleId}
+          savingEdit={savingEdit}
+          updateError={updateError}
+          onSetQuantity={cart.setQuantity}
+          onRemoveLine={cart.removeLine}
+          onCancelEdit={handleCancelEdit}
+          onSaveEdit={handleSaveEdit}
+          onCheckout={() => setCheckoutOpen(true)}
+        />
       </div>
+
+      {/* Mobile: sticky bottom bar opens the cart as a full-screen overlay */}
+      <button
+        type="button"
+        onClick={() => setMobileCartOpen(true)}
+        className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between border-t border-border bg-sidebar-bg px-5 py-4 text-white shadow-lg lg:hidden"
+      >
+        <span className="text-sm font-medium">
+          ກະຕ່າ ({cart.itemCount}) — {formatMoney(cart.total)} ກີບ
+        </span>
+        <span className="text-sm font-semibold underline">ເປີດ</span>
+      </button>
+
+      {mobileCartOpen && (
+        <div className="fixed inset-0 z-1000 flex flex-col bg-surface lg:hidden">
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
+            <h2 className="text-lg font-semibold text-text-primary">ກະຕ່າ</h2>
+            <button
+              type="button"
+              onClick={() => setMobileCartOpen(false)}
+              className="text-text-muted hover:text-text-primary"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            <CartContent
+              lines={cart.lines}
+              total={cart.total}
+              editSaleId={editSaleId}
+              savingEdit={savingEdit}
+              updateError={updateError}
+              onSetQuantity={cart.setQuantity}
+              onRemoveLine={cart.removeLine}
+              onCancelEdit={() => {
+                setMobileCartOpen(false);
+                handleCancelEdit();
+              }}
+              onSaveEdit={handleSaveEdit}
+              onCheckout={() => {
+                setMobileCartOpen(false);
+                setCheckoutOpen(true);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {successToast && <Toast message={successToast} tone="success" />}
 
@@ -474,6 +578,12 @@ export default function SalesPage() {
           await refetchCustomers();
           return data.createCustomer;
         }}
+      />
+
+      <CameraScannerDialog
+        open={cameraScannerOpen}
+        onClose={() => setCameraScannerOpen(false)}
+        onScan={handleCameraScan}
       />
     </div>
   );
