@@ -23,10 +23,10 @@ export function CameraScannerDialog({ open, onClose, onScan }: CameraScannerDial
           </button>
         </div>
 
-        <div className="relative aspect-square w-full bg-black">
+        <div className="relative aspect-4/3 w-full bg-black">
           <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
           {!error && (
-            <div className="pointer-events-none absolute inset-8 rounded-card border-2 border-white/70" />
+            <div className="pointer-events-none absolute inset-x-8 inset-y-12 rounded-card border-2 border-white/70" />
           )}
           {error && (
             <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-white">

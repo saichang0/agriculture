@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
+import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 
 // Shared camera-reading logic behind both the in-app CameraScannerDialog modal
 // and the standalone /scan/[sessionId] page a phone opens via QR code.
@@ -14,12 +15,36 @@ export function useCameraScanner(active: boolean, onScan: (code: string) => void
     if (!active) return;
 
     let cancelled = false;
-    const reader = new BrowserMultiFormatReader();
+    // TRY_HARDER improves detection of real-world (angled, low-contrast) 1D barcodes
+    // at the cost of scan speed — acceptable since this only runs while the dialog is open.
+    const hints = new Map();
+    hints.set(DecodeHintType.TRY_HARDER, true);
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.CODE_93,
+      BarcodeFormat.ITF,
+      BarcodeFormat.CODABAR,
+      BarcodeFormat.QR_CODE,
+    ]);
+    const reader = new BrowserMultiFormatReader(hints);
     setError(null);
 
     reader
       .decodeFromConstraints(
-        { video: { facingMode: { ideal: "environment" } } },
+        {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            // @ts-expect-error -- advanced focus constraints aren't in the lib.dom typings yet
+            advanced: [{ focusMode: "continuous" }],
+          },
+        },
         videoRef.current!,
         (result) => {
           if (cancelled || !result) return;

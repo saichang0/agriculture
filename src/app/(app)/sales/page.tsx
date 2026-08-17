@@ -340,7 +340,7 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden lg:flex-row">
+    <div className="flex h-full flex-col overflow-hidden lg:flex-row">
       {/* Left: products */}
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-24 sm:p-6 lg:pb-6">
         <div className="flex items-center gap-3">
@@ -373,11 +373,11 @@ export default function SalesPage() {
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           <button
             type="button"
             onClick={() => setCategoryId("")}
-            className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${categoryId === "" ? "bg-primary text-primary-text" : "bg-surface-muted text-text-secondary hover:bg-border"
+            className={`shrink-0 rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${categoryId === "" ? "bg-primary text-primary-text" : "bg-surface-muted text-text-secondary hover:bg-border"
               }`}
           >
             ທັງໝົດ
@@ -387,7 +387,7 @@ export default function SalesPage() {
               key={c.id}
               type="button"
               onClick={() => setCategoryId(c.id)}
-              className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${categoryId === c.id ? "bg-primary text-primary-text" : "bg-surface-muted text-text-secondary hover:bg-border"
+              className={`shrink-0 rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${categoryId === c.id ? "bg-primary text-primary-text" : "bg-surface-muted text-text-secondary hover:bg-border"
                 }`}
             >
               {c.name}
