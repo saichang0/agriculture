@@ -70,6 +70,7 @@ export default function ProductsPage() {
   ).length;
   const outOfStockCount = products.filter((p) => p.stockQty <= 0).length;
   const totalStockQty = products.reduce((sum, p) => sum + p.stockQty, 0);
+  const totalStockValue = products.reduce((sum, p) => sum + p.costPrice * p.stockQty, 0);
 
   const filtered = products.filter((p) => {
     if (!search.trim()) return true;
@@ -114,6 +115,7 @@ export default function ProductsPage() {
       <div className="flex gap-4">
         <StatCard label="ລາຍການສິນຄ້າ" value={products.length} />
         <StatCard label="ຈຳນວນສິນຄ້າທັງໝົດ" value={formatMoney(totalStockQty)} />
+        <StatCard label="ມູນຄ່າຕົ້ນທຶນທັງໝົດ" value={`${formatMoney(totalStockValue)} ກີບ`} />
         <StatCard label="ໃກ້ໝົດ" value={lowStockCount} tone="warning" />
         <StatCard label="ໝົດ" value={outOfStockCount} tone="danger" />
       </div>

@@ -5,12 +5,25 @@ import { Product } from "./products-queries";
 
 export interface CartLine {
   product: Product;
+  unitId: string | null;
   quantity: number;
 }
 
-export function computeLinePrice(product: Product, quantity: number) {
-  const useWholesale = quantity >= product.wholesaleMinQty;
-  const unitPrice = useWholesale ? product.wholesalePrice : product.retailPrice;
+// Resolves prices/wholesaleMinQty for a cart line's chosen unit: null (or no match in
+// packagingUnits) means the product's base unit, using its own price fields exactly as
+// before this feature existed. Otherwise the matching packaging unit's own prices are
+// used verbatim — never derived from the base unit's price. Mirrors resolveSaleUnit on
+// the backend (agriculture-api/graph/helpers.go) so the cart preview matches what the
+// server will actually charge.
+export function computeLinePrice(product: Product, unitId: string | null, quantity: number) {
+  const packagingUnit = unitId ? product.packagingUnits.find((u) => u.unitId === unitId) : undefined;
+
+  const retailPrice = packagingUnit ? packagingUnit.retailPrice : product.retailPrice;
+  const wholesalePrice = packagingUnit ? packagingUnit.wholesalePrice : product.wholesalePrice;
+  const wholesaleMinQty = packagingUnit ? packagingUnit.wholesaleMinQty : product.wholesaleMinQty;
+
+  const useWholesale = quantity >= wholesaleMinQty;
+  const unitPrice = useWholesale ? wholesalePrice : retailPrice;
   return {
     unitPrice,
     priceType: useWholesale ? "WHOLESALE" : "RETAIL",
@@ -21,29 +34,29 @@ export function computeLinePrice(product: Product, quantity: number) {
 export function useCart() {
   const [lines, setLines] = useState<CartLine[]>([]);
 
-  function addProduct(product: Product) {
+  function addProduct(product: Product, unitId: string | null = null) {
     setLines((prev) => {
-      const existing = prev.find((l) => l.product.id === product.id);
+      const existing = prev.find((l) => l.product.id === product.id && l.unitId === unitId);
       if (existing) {
         return prev.map((l) =>
-          l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l
+          l.product.id === product.id && l.unitId === unitId ? { ...l, quantity: l.quantity + 1 } : l
         );
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, unitId, quantity: 1 }];
     });
   }
 
-  function setQuantity(productId: string, quantity: number) {
+  function setQuantity(productId: string, unitId: string | null, quantity: number) {
     setLines((prev) => {
-      if (quantity <= 0) return prev.filter((l) => l.product.id !== productId);
+      if (quantity <= 0) return prev.filter((l) => !(l.product.id === productId && l.unitId === unitId));
       return prev.map((l) =>
-        l.product.id === productId ? { ...l, quantity } : l
+        l.product.id === productId && l.unitId === unitId ? { ...l, quantity } : l
       );
     });
   }
 
-  function removeLine(productId: string) {
-    setLines((prev) => prev.filter((l) => l.product.id !== productId));
+  function removeLine(productId: string, unitId: string | null) {
+    setLines((prev) => prev.filter((l) => !(l.product.id === productId && l.unitId === unitId)));
   }
 
   function clear() {
@@ -55,7 +68,7 @@ export function useCart() {
   }
 
   const total = useMemo(
-    () => lines.reduce((sum, l) => sum + computeLinePrice(l.product, l.quantity).subtotal, 0),
+    () => lines.reduce((sum, l) => sum + computeLinePrice(l.product, l.unitId, l.quantity).subtotal, 0),
     [lines]
   );
 

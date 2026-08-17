@@ -1,5 +1,14 @@
 import { gql, TypedDocumentNode } from "@apollo/client";
 
+export interface PackagingUnit {
+  unitId: string;
+  factor: number;
+  costPrice: number;
+  retailPrice: number;
+  wholesalePrice: number;
+  wholesaleMinQty: number;
+}
+
 export interface Product {
   id: string;
   barcode: string | null;
@@ -14,6 +23,7 @@ export interface Product {
   stockQty: number;
   minStockAlert: number;
   status: string;
+  packagingUnits: PackagingUnit[];
 }
 
 export interface Category {
@@ -48,6 +58,14 @@ export const PRODUCTS_PAGE_DATA: TypedDocumentNode<ProductsPageData, Record<stri
       stockQty
       minStockAlert
       status
+      packagingUnits {
+        unitId
+        factor
+        costPrice
+        retailPrice
+        wholesalePrice
+        wholesaleMinQty
+      }
     }
     categories {
       id
@@ -59,6 +77,15 @@ export const PRODUCTS_PAGE_DATA: TypedDocumentNode<ProductsPageData, Record<stri
     }
   }
 `;
+
+export interface PackagingUnitInput {
+  unitId: string;
+  factor: number;
+  costPrice: number;
+  retailPrice: number;
+  wholesalePrice: number;
+  wholesaleMinQty: number;
+}
 
 export interface NewProductInput {
   barcode?: string | null;
@@ -72,6 +99,7 @@ export interface NewProductInput {
   wholesaleMinQty: number;
   stockQty: number;
   minStockAlert: number;
+  packagingUnits?: PackagingUnitInput[];
 }
 
 export interface CreateProductData {
@@ -98,6 +126,14 @@ export const CREATE_PRODUCT: TypedDocumentNode<CreateProductData, CreateProductV
       stockQty
       minStockAlert
       status
+      packagingUnits {
+        unitId
+        factor
+        costPrice
+        retailPrice
+        wholesalePrice
+        wholesaleMinQty
+      }
     }
   }
 `;
@@ -129,6 +165,7 @@ export interface UpdateProductInput {
   stockQty?: number;
   minStockAlert?: number;
   status?: string;
+  packagingUnits?: PackagingUnitInput[];
 }
 
 export interface UpdateProductData {
@@ -156,6 +193,14 @@ export const UPDATE_PRODUCT: TypedDocumentNode<UpdateProductData, UpdateProductV
       stockQty
       minStockAlert
       status
+      packagingUnits {
+        unitId
+        factor
+        costPrice
+        retailPrice
+        wholesalePrice
+        wholesaleMinQty
+      }
     }
   }
 `;
@@ -184,6 +229,14 @@ export const PRODUCT_BY_ID: TypedDocumentNode<ProductByIdData, ProductByIdVariab
       stockQty
       minStockAlert
       status
+      packagingUnits {
+        unitId
+        factor
+        costPrice
+        retailPrice
+        wholesalePrice
+        wholesaleMinQty
+      }
     }
   }
 `;

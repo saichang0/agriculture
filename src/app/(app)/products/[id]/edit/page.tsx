@@ -19,6 +19,7 @@ import { ImageUpload } from "@/components/ui/ImageUpload";
 import { LoadingState } from "@/components/ui/Spinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RemoteScanButton } from "@/components/ui/RemoteScanButton";
+import { PackagingUnitsSection, PackagingUnitRow } from "@/components/products/PackagingUnitsSection";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <h2 className="text-sm font-semibold text-text-primary">{children}</h2>;
@@ -54,6 +55,7 @@ export default function EditProductPage() {
   const [stockQty, setStockQty] = useState("0");
   const [minStockAlert, setMinStockAlert] = useState("5");
   const [status, setStatus] = useState("ACTIVE");
+  const [packagingUnits, setPackagingUnits] = useState<PackagingUnitRow[]>([]);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -71,6 +73,16 @@ export default function EditProductPage() {
     setStockQty(String(p.stockQty));
     setMinStockAlert(String(p.minStockAlert));
     setStatus(p.status);
+    setPackagingUnits(
+      p.packagingUnits.map((u) => ({
+        unitId: u.unitId,
+        factor: String(u.factor),
+        costPrice: String(u.costPrice),
+        retailPrice: String(u.retailPrice),
+        wholesalePrice: String(u.wholesalePrice),
+        wholesaleMinQty: String(u.wholesaleMinQty),
+      }))
+    );
     setInitialized(true);
   }, [productData, initialized]);
 
@@ -92,6 +104,16 @@ export default function EditProductPage() {
           stockQty: Number(stockQty),
           minStockAlert: Number(minStockAlert),
           status,
+          packagingUnits: packagingUnits
+            .filter((u) => u.unitId && Number(u.factor) > 0)
+            .map((u) => ({
+              unitId: u.unitId,
+              factor: Number(u.factor),
+              costPrice: Number(u.costPrice),
+              retailPrice: Number(u.retailPrice),
+              wholesalePrice: Number(u.wholesalePrice),
+              wholesaleMinQty: Number(u.wholesaleMinQty),
+            })),
         },
       },
     });
@@ -222,6 +244,29 @@ export default function EditProductPage() {
                 onChange={setWholesaleMinQty}
                 required
                 className="sm:max-w-64"
+              />
+            </div>
+
+            <div className="h-px bg-border" />
+
+            <div className="flex flex-col gap-4">
+              <SectionLabel>ຫົວໜ່ວຍການຂາຍເພີ່ມເຕີມ</SectionLabel>
+              <p className="text-sm text-text-secondary">
+                ສຳລັບສິນຄ້າທີ່ຂາຍໄດ້ຫຼາຍຫົວໜ່ວຍ ເຊັ່ນ ຊື້ເປັນແກັດ ແຕ່ຂາຍແຍກເປັນຕຸກ — ຫົວໜ່ວຍຂ້າງເທິງແມ່ນຫົວໜ່ວຍພື້ນຖານ
+                (ໃຊ້ນັບສະຕັອກ), ຫົວໜ່ວຍທີ່ເພີ່ມນີ້ຄືຫົວໜ່ວຍທາງເລືອກອື່ນທີ່ຂາຍໄດ້.
+              </p>
+              <PackagingUnitsSection
+                rows={packagingUnits}
+                onChange={setPackagingUnits}
+                units={units}
+                onCreateUnit={async (newUnitName) => {
+                  const { data: res } = await createUnit({
+                    variables: { input: { name: newUnitName } },
+                  });
+                  if (!res?.createUnit) throw new Error("ບໍ່ສາມາດເພີ່ມຫົວໜ່ວຍໄດ້");
+                  await refetchRefs();
+                  return res.createUnit;
+                }}
               />
             </div>
 

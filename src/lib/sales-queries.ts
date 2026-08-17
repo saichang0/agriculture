@@ -29,6 +29,7 @@ export const SALES_PAGE_DATA: TypedDocumentNode<SalesPageData, Record<string, ne
 export interface NewSaleItemInput {
   productId: string;
   quantity: number;
+  unitId?: string | null;
 }
 
 export interface NewSaleInput {
@@ -46,6 +47,8 @@ export interface SaleItem {
   unitPrice: number;
   priceType: string;
   subtotal: number;
+  unitId: string | null;
+  factor: number;
 }
 
 export interface Sale {
@@ -82,6 +85,8 @@ export const CREATE_SALE: TypedDocumentNode<CreateSaleData, CreateSaleVariables>
         unitPrice
         priceType
         subtotal
+        unitId
+        factor
       }
     }
   }

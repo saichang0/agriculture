@@ -7,6 +7,8 @@ export interface SaleItem {
   unitPrice: number;
   priceType: string;
   subtotal: number;
+  unitId: string | null;
+  factor: number;
 }
 
 export interface Sale {
@@ -56,6 +58,8 @@ export const SALES_HISTORY_DATA: TypedDocumentNode<SalesHistoryData, Record<stri
         unitPrice
         priceType
         subtotal
+        unitId
+        factor
       }
     }
     customers {
@@ -95,6 +99,8 @@ export const SALE_BY_ID: TypedDocumentNode<SaleByIdData, SaleByIdVariables> = gq
         unitPrice
         priceType
         subtotal
+        unitId
+        factor
       }
     }
   }
@@ -127,6 +133,7 @@ export const USER_BY_ID: TypedDocumentNode<UserByIdData, UserByIdVariables> = gq
 export interface UpdateSaleItemInput {
   productId: string;
   quantity: number;
+  unitId?: string | null;
 }
 
 export interface UpdateSaleData {
@@ -159,6 +166,8 @@ export const UPDATE_SALE: TypedDocumentNode<UpdateSaleData, UpdateSaleVariables>
         unitPrice
         priceType
         subtotal
+        unitId
+        factor
       }
     }
   }

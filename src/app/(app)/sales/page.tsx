@@ -18,6 +18,9 @@ import { Toast } from "@/components/ui/Toast";
 import { CheckoutDialog } from "@/components/sales/CheckoutDialog";
 import { CameraScannerDialog } from "@/components/sales/CameraScannerDialog";
 import { RemoteScanButton } from "@/components/ui/RemoteScanButton";
+import { ImagePreviewDialog } from "@/components/ui/ImagePreviewDialog";
+import { UnitPickerDialog } from "@/components/sales/UnitPickerDialog";
+import { Product } from "@/lib/products-queries";
 
 function formatMoney(n: number) {
   return n.toLocaleString("lo-LA");
@@ -70,8 +73,9 @@ interface CartContentProps {
   editSaleId: string | null;
   savingEdit: boolean;
   updateError: { message: string } | null | undefined;
-  onSetQuantity: (productId: string, quantity: number) => void;
-  onRemoveLine: (productId: string) => void;
+  unitById: Map<string, string>;
+  onSetQuantity: (productId: string, unitId: string | null, quantity: number) => void;
+  onRemoveLine: (productId: string, unitId: string | null) => void;
   onCancelEdit: () => void;
   onSaveEdit: () => void;
   onCheckout: () => void;
@@ -83,6 +87,7 @@ function CartContent({
   editSaleId,
   savingEdit,
   updateError,
+  unitById,
   onSetQuantity,
   onRemoveLine,
   onCancelEdit,
@@ -114,11 +119,19 @@ function CartContent({
             </thead>
             <tbody>
               {lines.map((line) => {
-                const { unitPrice, priceType, subtotal } = computeLinePrice(line.product, line.quantity);
+                const { unitPrice, priceType, subtotal } = computeLinePrice(
+                  line.product,
+                  line.unitId,
+                  line.quantity
+                );
+                const unitName = line.unitId ? unitById.get(line.unitId) : null;
                 return (
-                  <tr key={line.product.id} className="border-b border-border last:border-0">
+                  <tr key={`${line.product.id}:${line.unitId ?? ""}`} className="border-b border-border last:border-0">
                     <td className="py-2.5 pr-2 align-top">
-                      <div className="text-sm font-medium text-text-primary">{line.product.name}</div>
+                      <div className="text-sm font-medium text-text-primary">
+                        {line.product.name}
+                        {unitName && <span className="text-text-secondary"> ({unitName})</span>}
+                      </div>
                       <div className="text-xs text-text-secondary">
                         {formatMoney(unitPrice)} ກີບ/{priceType === "WHOLESALE" ? "ສົ່ງ" : "ຍ່ອຍ"}
                       </div>
@@ -127,7 +140,7 @@ function CartContent({
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
-                          onClick={() => onSetQuantity(line.product.id, line.quantity - 1)}
+                          onClick={() => onSetQuantity(line.product.id, line.unitId, line.quantity - 1)}
                           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary hover:bg-surface-muted"
                         >
                           −
@@ -135,7 +148,7 @@ function CartContent({
                         <span className="w-5 text-center text-sm text-text-primary">{line.quantity}</span>
                         <button
                           type="button"
-                          onClick={() => onSetQuantity(line.product.id, line.quantity + 1)}
+                          onClick={() => onSetQuantity(line.product.id, line.unitId, line.quantity + 1)}
                           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-control border border-border text-text-secondary hover:bg-surface-muted"
                         >
                           +
@@ -148,7 +161,7 @@ function CartContent({
                     <td className="py-2.5 align-top">
                       <button
                         type="button"
-                        onClick={() => onRemoveLine(line.product.id)}
+                        onClick={() => onRemoveLine(line.product.id, line.unitId)}
                         className="text-text-muted hover:text-danger"
                       >
                         ✕
@@ -221,6 +234,8 @@ export default function SalesPage() {
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
   const [hydratedEditId, setHydratedEditId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
+  const [unitPickerProduct, setUnitPickerProduct] = useState<Product | null>(null);
 
   const cart = useCart();
 
@@ -236,9 +251,12 @@ export default function SalesPage() {
       .map((item) => {
         const product = productById.get(item.productId);
         if (!product) return null;
-        return { product, quantity: item.quantity };
+        return { product, unitId: item.unitId, quantity: item.quantity };
       })
-      .filter((l): l is { product: (typeof productsData.products)[number]; quantity: number } => l !== null);
+      .filter(
+        (l): l is { product: (typeof productsData.products)[number]; unitId: string | null; quantity: number } =>
+          l !== null
+      );
 
     cart.loadLines(lines);
     setHydratedEditId(editSaleId);
@@ -257,11 +275,17 @@ export default function SalesPage() {
     return map;
   }, [categories]);
 
+  const unitById = useMemo(() => {
+    const map = new Map<string, string>();
+    (productsData?.units ?? []).forEach((u) => map.set(u.id, u.name));
+    return map;
+  }, [productsData]);
+
   const handleScan = useCallback(
     (code: string) => {
       const match = products.find((p) => p.barcode === code);
       if (match) {
-        cart.addProduct(match);
+        cart.addProduct(match, null);
         setScanNotice(`ເພີ່ມ "${match.name}" ເຂົ້າກະຕ່າແລ້ວ`);
       } else {
         setScanNotice(`ບໍ່ພົບສິນຄ້າສຳລັບລະຫັດ ${code}`);
@@ -289,6 +313,15 @@ export default function SalesPage() {
     return p.name.toLowerCase().includes(q) || (p.barcode ?? "").toLowerCase().includes(q);
   });
 
+  function handleProductClick(p: (typeof products)[number]) {
+    if (p.stockQty <= 0) return;
+    if (p.packagingUnits.length === 0) {
+      cart.addProduct(p, null);
+      return;
+    }
+    setUnitPickerProduct(p);
+  }
+
   async function handleConfirmCheckout(opts: {
     customerId: string | null;
     paid: number;
@@ -299,7 +332,7 @@ export default function SalesPage() {
       variables: {
         input: {
           customerId: opts.customerId,
-          items: cart.lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
+          items: cart.lines.map((l) => ({ productId: l.product.id, quantity: l.quantity, unitId: l.unitId })),
           paid: opts.paid,
           paymentMethod: opts.paymentMethod,
           dueDate: opts.dueDate,
@@ -320,7 +353,7 @@ export default function SalesPage() {
       variables: {
         id: editSaleId,
         input: {
-          items: cart.lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
+          items: cart.lines.map((l) => ({ productId: l.product.id, quantity: l.quantity, unitId: l.unitId })),
         },
       },
     });
@@ -404,20 +437,31 @@ export default function SalesPage() {
         ) : view === "grid" ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {filtered.map((p) => (
-              <button
+              <div
                 key={p.id}
-                type="button"
-                onClick={() => cart.addProduct(p)}
-                disabled={p.stockQty <= 0}
-                className="flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left transition-shadow hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                role="button"
+                tabIndex={p.stockQty <= 0 ? -1 : 0}
+                onClick={() => handleProductClick(p)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") handleProductClick(p);
+                }}
+                aria-disabled={p.stockQty <= 0}
+                className="flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left transition-shadow hover:shadow-md aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
               >
-                <div className="flex aspect-square items-center justify-center bg-surface-muted">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (p.imageUrl) setPreviewImage({ src: p.imageUrl, alt: p.name });
+                  }}
+                  className="flex aspect-square items-center justify-center bg-surface-muted"
+                >
                   {p.imageUrl ? (
                     <Image src={p.imageUrl} alt={p.name} width={160} height={160} className="h-full w-full object-cover" />
                   ) : (
                     <ProductNoImage />
                   )}
-                </div>
+                </button>
                 <div className="flex flex-col gap-1 p-3">
                   <span className="truncate text-sm font-medium text-text-primary">{p.name}</span>
                   <span className="text-sm text-text-secondary">{formatMoney(p.retailPrice)} ກີບ</span>
@@ -427,72 +471,85 @@ export default function SalesPage() {
                     <Badge tone="warning">ໃກ້ໝົດ</Badge>
                   ) : null}
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col overflow-hidden rounded-card border border-border bg-surface">
-            <div className="hidden items-center gap-4 border-b border-border bg-surface-muted px-4 py-2.5 text-xs font-medium text-text-secondary sm:flex">
-              <div className="w-11 shrink-0" />
-              <div className="min-w-0 flex-1">ສິນຄ້າ</div>
-              <div className="hidden w-32 shrink-0 text-right md:block">ປະເພດ</div>
-              <div className="w-32 shrink-0 text-right">ລາຄາຍ່ອຍ</div>
-              <div className="hidden w-32 shrink-0 text-right md:block">ລາຄາສົ່ງ</div>
-              <div className="w-28 shrink-0 text-right">ຈຳນວນ</div>
-              <div className="hidden w-24 shrink-0 text-right sm:block">ສະຖານະ</div>
+          <div className="overflow-x-auto rounded-card border border-border bg-surface">
+            <div className="min-w-fit">
+              <div className="hidden items-center gap-4 border-b border-border bg-surface-muted px-4 py-2.5 text-xs font-medium text-text-secondary sm:flex">
+                <div className="w-11 shrink-0" />
+                <div className="w-56 shrink-0">ສິນຄ້າ</div>
+                <div className="hidden w-32 shrink-0 text-right md:block">ປະເພດ</div>
+                <div className="w-32 shrink-0 text-right">ລາຄາຍ່ອຍ</div>
+                <div className="hidden w-32 shrink-0 text-right md:block">ລາຄາສົ່ງ</div>
+                <div className="w-28 shrink-0 text-right">ຈຳນວນ</div>
+                <div className="hidden w-24 shrink-0 text-right sm:block">ສະຖານະ</div>
+              </div>
+
+              {filtered.map((p) => (
+                <div
+                  key={p.id}
+                  role="button"
+                  tabIndex={p.stockQty <= 0 ? -1 : 0}
+                  onClick={() => handleProductClick(p)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") handleProductClick(p);
+                  }}
+                  aria-disabled={p.stockQty <= 0}
+                  className="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-0 hover:bg-surface-muted aria-disabled:cursor-not-allowed aria-disabled:opacity-50 sm:gap-4 sm:px-4"
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (p.imageUrl) setPreviewImage({ src: p.imageUrl, alt: p.name });
+                    }}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-surface-muted"
+                  >
+                    {p.imageUrl ? (
+                      <Image src={p.imageUrl} alt={p.name} width={44} height={44} className="h-full w-full object-cover" />
+                    ) : (
+                      <ProductNoImage />
+                    )}
+                  </button>
+                  <div className="flex w-40 min-w-0 flex-1 flex-col gap-0.5 sm:w-56 sm:flex-none">
+                    <span className="text-sm font-medium text-text-primary sm:whitespace-normal">{p.name}</span>
+                    <span className="text-xs text-text-secondary sm:hidden">
+                      {categoryById.get(p.categoryId) ?? "-"}
+                    </span>
+                  </div>
+                  <div className="hidden w-32 shrink-0 text-right md:block">
+                    <span className="truncate text-xs text-text-secondary">
+                      {categoryById.get(p.categoryId) ?? "-"}
+                    </span>
+                  </div>
+                  <div className="w-24 shrink-0 text-right text-sm font-semibold text-text-primary sm:w-32">
+                    {formatMoney(p.retailPrice)} ກີບ
+                  </div>
+
+                  <div className="hidden w-32 shrink-0 text-right text-xs text-text-secondary md:block">
+                    {formatMoney(p.wholesalePrice)} ກີບ
+                    <br />
+                    (≥{p.wholesaleMinQty} ຫົວໜ່ວຍ)
+                  </div>
+
+                  <div className="w-16 shrink-0 text-right text-sm text-text-primary sm:w-28">
+                    {formatMoney(p.stockQty)}
+                  </div>
+
+                  <div className="hidden w-24 shrink-0 justify-end sm:flex">
+                    {p.stockQty <= 0 ? (
+                      <Badge tone="danger">ໝົດ</Badge>
+                    ) : p.stockQty <= p.minStockAlert ? (
+                      <Badge tone="warning">ໃກ້ໝົດ</Badge>
+                    ) : (
+                      <Badge tone="success">ພ້ອມຂາຍ</Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-
-            {filtered.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => cart.addProduct(p)}
-                disabled={p.stockQty <= 0}
-                className="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-0 hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50 sm:gap-4 sm:px-4"
-              >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-surface-muted">
-                  {p.imageUrl ? (
-                    <Image src={p.imageUrl} alt={p.name} width={44} height={44} className="h-full w-full object-cover" />
-                  ) : (
-                    <ProductNoImage />
-                  )}
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-sm font-medium text-text-primary">{p.name}</span>
-                  <span className="text-xs text-text-secondary sm:hidden">
-                    {categoryById.get(p.categoryId) ?? "-"}
-                  </span>
-                </div>
-                <div className="hidden w-32 shrink-0 text-right md:block">
-                  <span className="truncate text-xs text-text-secondary">
-                    {categoryById.get(p.categoryId) ?? "-"}
-                  </span>
-                </div>
-                <div className="w-24 shrink-0 text-right text-sm font-semibold text-text-primary sm:w-32">
-                  {formatMoney(p.retailPrice)} ກີບ
-                </div>
-
-                <div className="hidden w-32 shrink-0 text-right text-xs text-text-secondary md:block">
-                  {formatMoney(p.wholesalePrice)} ກີບ
-                  <br />
-                  (≥{p.wholesaleMinQty} ຫົວໜ່ວຍ)
-                </div>
-
-                <div className="w-16 shrink-0 text-right text-sm text-text-primary sm:w-28">
-                  {formatMoney(p.stockQty)}
-                </div>
-
-                <div className="hidden w-24 shrink-0 justify-end sm:flex">
-                  {p.stockQty <= 0 ? (
-                    <Badge tone="danger">ໝົດ</Badge>
-                  ) : p.stockQty <= p.minStockAlert ? (
-                    <Badge tone="warning">ໃກ້ໝົດ</Badge>
-                  ) : (
-                    <Badge tone="success">ພ້ອມຂາຍ</Badge>
-                  )}
-                </div>
-              </button>
-            ))}
           </div>
         )}
       </div>
@@ -507,6 +564,7 @@ export default function SalesPage() {
           editSaleId={editSaleId}
           savingEdit={savingEdit}
           updateError={updateError}
+          unitById={unitById}
           onSetQuantity={cart.setQuantity}
           onRemoveLine={cart.removeLine}
           onCancelEdit={handleCancelEdit}
@@ -546,6 +604,7 @@ export default function SalesPage() {
               editSaleId={editSaleId}
               savingEdit={savingEdit}
               updateError={updateError}
+              unitById={unitById}
               onSetQuantity={cart.setQuantity}
               onRemoveLine={cart.removeLine}
               onCancelEdit={() => {
@@ -584,6 +643,22 @@ export default function SalesPage() {
         open={cameraScannerOpen}
         onClose={() => setCameraScannerOpen(false)}
         onScan={handleCameraScan}
+      />
+
+      <ImagePreviewDialog
+        src={previewImage?.src ?? null}
+        alt={previewImage?.alt}
+        onClose={() => setPreviewImage(null)}
+      />
+
+      <UnitPickerDialog
+        product={unitPickerProduct}
+        unitById={unitById}
+        onClose={() => setUnitPickerProduct(null)}
+        onSelect={(unitId) => {
+          if (unitPickerProduct) cart.addProduct(unitPickerProduct, unitId);
+          setUnitPickerProduct(null);
+        }}
       />
     </div>
   );
