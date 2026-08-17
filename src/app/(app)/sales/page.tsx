@@ -340,9 +340,9 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden lg:flex-row">
+    <div className="flex flex-col lg:h-full lg:flex-row lg:overflow-hidden">
       {/* Left: products */}
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-24 sm:p-6 lg:pb-6">
+      <div className="flex flex-1 flex-col gap-4 p-4 pb-24 sm:p-6 lg:overflow-y-auto lg:pb-6">
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1 lg:max-w-sm">
             <Input

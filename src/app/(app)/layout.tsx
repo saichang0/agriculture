@@ -78,7 +78,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <span className="text-sm font-semibold text-text-primary">ຮ້ານອຸປະກອນ</span>
         </div>
 
-        <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
