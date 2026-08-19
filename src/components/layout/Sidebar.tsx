@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearToken } from "@/lib/auth";
+import { useMutation } from "@apollo/client/react";
+import { clearToken, getRefreshToken } from "@/lib/auth";
+import { LOGOUT } from "@/lib/queries";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface NavItem {
@@ -119,14 +121,25 @@ export function Sidebar({ collapsed, onToggleCollapse, userLabel }: SidebarProps
   const router = useRouter();
   const [reportsOpen, setReportsOpen] = useState(pathname.startsWith("/reports"));
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [logout] = useMutation(LOGOUT);
 
   function isActive(href: string) {
     return pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    const refreshToken = getRefreshToken();
     clearToken();
     router.push("/login");
+    // Best-effort: revoke server-side so the refresh token can't outlive this
+    // logout. Runs after navigating away so the user isn't blocked on it.
+    if (refreshToken) {
+      try {
+        await logout({ variables: { refreshToken } });
+      } catch {
+        // Already logged out locally — nothing more to do if this fails.
+      }
+    }
   }
 
   return (

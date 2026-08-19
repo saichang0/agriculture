@@ -49,6 +49,7 @@ export default function ProductsPage() {
     refetchQueries: [{ query: PRODUCTS_PAGE_DATA }],
   });
   const [search, setSearch] = useState("");
+  const [stockFilter, setStockFilter] = useState<"ALL" | "LOW" | "OUT">("ALL");
   const [toDelete, setToDelete] = useState<Product | null>(null);
 
   const categoryById = useMemo(() => {
@@ -72,15 +73,22 @@ export default function ProductsPage() {
   const totalStockQty = products.reduce((sum, p) => sum + p.stockQty, 0);
   const totalStockValue = products.reduce((sum, p) => sum + p.costPrice * p.stockQty, 0);
 
-  const filtered = products.filter((p) => {
-    if (!search.trim()) return true;
-    const q = search.trim().toLowerCase();
-    return (
-      p.name.toLowerCase().includes(q) ||
-      (p.barcode ?? "").toLowerCase().includes(q) ||
-      (categoryById.get(p.categoryId) ?? "").toLowerCase().includes(q)
-    );
-  });
+  const filtered = products
+    .filter((p) => {
+      if (stockFilter === "LOW") return p.stockQty > 0 && p.stockQty <= p.minStockAlert;
+      if (stockFilter === "OUT") return p.stockQty <= 0;
+      return true;
+    })
+    .filter((p) => {
+      if (!search.trim()) return true;
+      const q = search.trim().toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.barcode ?? "").toLowerCase().includes(q) ||
+        (categoryById.get(p.categoryId) ?? "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => b.costPrice * b.stockQty - a.costPrice * a.stockQty);
 
   async function handleConfirmDelete() {
     if (!toDelete) return;
@@ -113,24 +121,87 @@ export default function ProductsPage() {
       </div>
 
       <div className="flex gap-4">
-        <StatCard label="ລາຍການສິນຄ້າ" value={products.length} />
+        <StatCard
+          label="ລາຍການສິນຄ້າ"
+          value={products.length}
+          active={stockFilter === "ALL"}
+          onClick={() => setStockFilter("ALL")}
+        />
         <StatCard label="ຈຳນວນສິນຄ້າທັງໝົດ" value={formatMoney(totalStockQty)} />
         <StatCard label="ມູນຄ່າຕົ້ນທຶນທັງໝົດ" value={`${formatMoney(totalStockValue)} ກີບ`} />
-        <StatCard label="ໃກ້ໝົດ" value={lowStockCount} tone="warning" />
-        <StatCard label="ໝົດ" value={outOfStockCount} tone="danger" />
+        <StatCard
+          label="ໃກ້ໝົດ"
+          value={lowStockCount}
+          tone="warning"
+          active={stockFilter === "LOW"}
+          onClick={() => setStockFilter(stockFilter === "LOW" ? "ALL" : "LOW")}
+        />
+        <StatCard
+          label="ໝົດ"
+          value={outOfStockCount}
+          tone="danger"
+          active={stockFilter === "OUT"}
+          onClick={() => setStockFilter(stockFilter === "OUT" ? "ALL" : "OUT")}
+        />
       </div>
 
-      <div className="max-w-sm">
-        <Input
-          placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ, barcode, ໝວດໝູ່..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="max-w-sm flex-1">
+          <Input
+            placeholder="ຄົ້ນຫາຊື່ສິນຄ້າ, barcode, ໝວດໝູ່..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setStockFilter("ALL")}
+            className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              stockFilter === "ALL"
+                ? "bg-primary text-primary-text"
+                : "bg-surface-muted text-text-secondary hover:bg-border"
+            }`}
+          >
+            ທັງໝົດ
+          </button>
+          <button
+            type="button"
+            onClick={() => setStockFilter("LOW")}
+            className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              stockFilter === "LOW"
+                ? "bg-warning text-white"
+                : "bg-surface-muted text-text-secondary hover:bg-border"
+            }`}
+          >
+            ໃກ້ໝົດ ({lowStockCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStockFilter("OUT")}
+            className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              stockFilter === "OUT"
+                ? "bg-danger text-white"
+                : "bg-surface-muted text-text-secondary hover:bg-border"
+            }`}
+          >
+            ໝົດ ({outOfStockCount})
+          </button>
+        </div>
       </div>
 
       {filtered.length === 0 ? (
         <EmptyState
-          title={products.length === 0 ? "ຍັງບໍ່ມີສິນຄ້າ" : "ບໍ່ພົບສິນຄ້າທີ່ຄົ້ນຫາ"}
+          title={
+            products.length === 0
+              ? "ຍັງບໍ່ມີສິນຄ້າ"
+              : stockFilter === "LOW"
+                ? "ບໍ່ມີສິນຄ້າໃກ້ໝົດ"
+                : stockFilter === "OUT"
+                  ? "ບໍ່ມີສິນຄ້າໝົດ"
+                  : "ບໍ່ພົບສິນຄ້າທີ່ຄົ້ນຫາ"
+          }
           description={products.length === 0 ? "ເລີ່ມຕົ້ນໂດຍການເພີ່ມສິນຄ້າອັນທຳອິດ" : undefined}
           action={
             products.length === 0 ? (
@@ -142,16 +213,18 @@ export default function ProductsPage() {
         />
       ) : (
         <div className="overflow-x-auto rounded-card border border-border bg-surface">
-          <table className="w-full min-w-[960px] text-left text-sm">
+          <table className="w-full min-w-300 text-left text-sm">
             <thead>
               <tr className="border-b border-border text-text-secondary">
                 <th className="px-4 py-3 font-medium">ຮູບ</th>
                 <th className="px-4 py-3 font-medium">ຊື່ສິນຄ້າ</th>
                 <th className="px-4 py-3 font-medium">ໝວດໝູ່</th>
                 <th className="px-4 py-3 font-medium">ຫົວໜ່ວຍ</th>
+                <th className="px-4 py-3 font-medium">ຕົ້ນທຶນ</th>
                 <th className="px-4 py-3 font-medium">ລາຄາຍ່ອຍ</th>
                 <th className="px-4 py-3 font-medium">ລາຄາສົ່ງ</th>
                 <th className="px-4 py-3 font-medium">ຈຳນວນ</th>
+                <th className="px-4 py-3 font-medium">ມູນຄ່າສະຕັອກ</th>
                 <th className="px-4 py-3 font-medium">ສະຖານະ</th>
                 <th className="px-4 py-3 font-medium text-right">ຈັດການ</th>
               </tr>
@@ -196,6 +269,7 @@ export default function ProductsPage() {
                     <td className="px-4 py-3 text-text-secondary">
                       {unitById.get(p.unitId) ?? "-"}
                     </td>
+                    <td className="px-4 py-3 text-text-primary">{formatMoney(p.costPrice)}</td>
                     <td className="px-4 py-3 text-text-primary">{formatMoney(p.retailPrice)}</td>
                     <td className="px-4 py-3 text-text-primary">{formatMoney(p.wholesalePrice)}</td>
                     <td className="px-4 py-3">
@@ -204,6 +278,9 @@ export default function ProductsPage() {
                         {isOut && <Badge tone="danger">ໝົດ</Badge>}
                         {isLow && <Badge tone="warning">ໃກ້ໝົດ</Badge>}
                       </div>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-text-primary">
+                      {formatMoney(p.costPrice * p.stockQty)}
                     </td>
                     <td className="px-4 py-3">
                       {p.status === "ACTIVE" ? (

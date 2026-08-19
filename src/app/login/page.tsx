@@ -4,7 +4,7 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@apollo/client/react";
 import { LOGIN } from "@/lib/queries";
-import { setToken } from "@/lib/auth";
+import { setTokens } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -18,7 +18,7 @@ export default function LoginPage() {
     e.preventDefault();
     const { data } = await login({ variables: { username, password } });
     if (data?.login?.token) {
-      setToken(data.login.token);
+      setTokens(data.login.token, data.login.refreshToken);
       router.push("/");
     }
   }
