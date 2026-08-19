@@ -114,9 +114,10 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   userLabel?: string;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ collapsed, onToggleCollapse, userLabel }: SidebarProps) {
+export function Sidebar({ collapsed, onToggleCollapse, userLabel, onNavigate }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [reportsOpen, setReportsOpen] = useState(pathname.startsWith("/reports"));
@@ -194,6 +195,7 @@ export function Sidebar({ collapsed, onToggleCollapse, userLabel }: SidebarProps
                           <li key={child.href}>
                             <Link
                               href={child.href}
+                              onClick={onNavigate}
                               className={`block rounded-control px-3 py-2 text-sm transition-colors ${
                                 childActive
                                   ? "bg-sidebar-bg-active text-sidebar-text-active"
@@ -221,6 +223,7 @@ export function Sidebar({ collapsed, onToggleCollapse, userLabel }: SidebarProps
                             <li key={child.href}>
                               <Link
                                 href={child.href}
+                                onClick={onNavigate}
                                 className={`block rounded-control px-3 py-2 text-sm transition-colors ${
                                   childActive
                                     ? "bg-sidebar-bg-active text-sidebar-text-active"
@@ -243,6 +246,7 @@ export function Sidebar({ collapsed, onToggleCollapse, userLabel }: SidebarProps
               <li key={item.href} className="group/nav relative">
                 <Link
                   href={item.href}
+                  onClick={onNavigate}
                   className={`flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium transition-colors ${
                     active
                       ? "bg-sidebar-bg-active text-sidebar-text-active"
@@ -274,6 +278,7 @@ export function Sidebar({ collapsed, onToggleCollapse, userLabel }: SidebarProps
           <li>
             <Link
               href="/settings"
+              onClick={onNavigate}
               className={`flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive("/settings")
                   ? "bg-sidebar-bg-active text-sidebar-text-active"

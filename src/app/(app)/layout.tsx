@@ -57,6 +57,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               collapsed={false}
               onToggleCollapse={() => setMobileSidebarOpen(false)}
               userLabel={userLabel}
+              onNavigate={() => setMobileSidebarOpen(false)}
             />
           </div>
         </div>

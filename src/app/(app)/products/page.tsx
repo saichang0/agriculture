@@ -135,6 +135,7 @@ export default function ProductsPage() {
           tone="warning"
           active={stockFilter === "LOW"}
           onClick={() => setStockFilter(stockFilter === "LOW" ? "ALL" : "LOW")}
+          className="hidden lg:block"
         />
         <StatCard
           label="ໝົດ"
@@ -142,8 +143,9 @@ export default function ProductsPage() {
           tone="danger"
           active={stockFilter === "OUT"}
           onClick={() => setStockFilter(stockFilter === "OUT" ? "ALL" : "OUT")}
+          className="hidden lg:block"
         />
-      </div>
+      </div> 
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="max-w-sm flex-1">

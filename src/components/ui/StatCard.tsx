@@ -4,6 +4,7 @@ interface StatCardProps {
   tone?: "default" | "warning" | "danger";
   onClick?: () => void;
   active?: boolean;
+  className?: string;
 }
 
 const toneClasses = {
@@ -18,10 +19,17 @@ const valueToneClasses = {
   danger: "text-danger",
 };
 
-export function StatCard({ label, value, tone = "default", onClick, active = false }: StatCardProps) {
+export function StatCard({
+  label,
+  value,
+  tone = "default",
+  onClick,
+  active = false,
+  className = "",
+}: StatCardProps) {
   const classes = `flex-1 rounded-card border p-4 text-left ${toneClasses[tone]} ${
     onClick ? "cursor-pointer transition-shadow hover:shadow-md" : ""
-  } ${active ? "ring-2 ring-primary" : ""}`;
+  } ${active ? "ring-2 ring-primary" : ""} ${className}`;
 
   const content = (
     <>
