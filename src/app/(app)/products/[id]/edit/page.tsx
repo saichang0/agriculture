@@ -122,11 +122,11 @@ export default function EditProductPage() {
     }
   }
 
-  if (loadingRefs || loadingProduct) return <LoadingState />;
+  if ((loadingRefs && !refData) || loadingProduct) return <LoadingState />;
 
   if (!productData?.product) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <EmptyState title="ບໍ່ພົບສິນຄ້ານີ້" />
       </div>
     );
@@ -136,7 +136,7 @@ export default function EditProductPage() {
   const units = refData?.units ?? [];
 
   return (
-    <div className="flex min-h-screen flex-col p-8">
+    <div className="flex min-h-screen flex-col p-4 sm:p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-text-primary">ແກ້ໄຂສິນຄ້າ</h1>
         <p className="mt-1 text-sm text-text-secondary">{productData.product.name}</p>

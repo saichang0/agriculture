@@ -37,7 +37,7 @@ export default function ReportsSalesPage() {
       const d = new Date(seconds * 1000);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
-      const revenue = sale.items.reduce((sum, i) => sum + i.subtotal, 0);
+      const revenue = sale.items.reduce((sum, i) => sum + i.subtotal, 0) - sale.discount;
       const cost = sale.items.reduce((sum, i) => sum + i.costPrice * i.quantity, 0);
 
       const existing = byMonth.get(key);
@@ -74,14 +74,14 @@ export default function ReportsSalesPage() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <EmptyState title="ບໍ່ສາມາດໂຫຼດຂໍ້ມູນໄດ້" description={error.message} />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 p-8">
+    <div className="flex min-h-screen flex-col gap-6 p-4 sm:p-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">ລາຍງານ - ຍອດຂາຍ</h1>

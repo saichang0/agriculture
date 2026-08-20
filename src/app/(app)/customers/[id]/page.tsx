@@ -144,14 +144,14 @@ export default function CustomerDetailPage() {
 
   if (!customer) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <EmptyState title="ບໍ່ພົບຂໍ້ມູນລູກຄ້າ" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 p-8">
+    <div className="flex min-h-screen flex-col gap-6 p-4 sm:p-6">
       <button
         type="button"
         onClick={() => router.push("/customers")}

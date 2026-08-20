@@ -9,6 +9,7 @@ export interface OverviewSaleItem {
 export interface OverviewSale {
   id: string;
   saleDate: string;
+  discount: number;
   items: OverviewSaleItem[];
 }
 
@@ -39,6 +40,7 @@ export const REPORTS_OVERVIEW_DATA: TypedDocumentNode<ReportsOverviewData, Recor
     sales {
       id
       saleDate
+      discount
       items {
         quantity
         costPrice

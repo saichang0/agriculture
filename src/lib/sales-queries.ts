@@ -36,6 +36,7 @@ export interface NewSaleInput {
   customerId?: string | null;
   items: NewSaleItemInput[];
   paid: number;
+  discount?: number | null;
   dueDate?: string | null;
   paymentMethod?: string | null;
 }
@@ -54,6 +55,8 @@ export interface SaleItem {
 export interface Sale {
   id: string;
   code: string;
+  subtotal: number;
+  discount: number;
   total: number;
   paid: number;
   debt: number;
@@ -74,6 +77,8 @@ export const CREATE_SALE: TypedDocumentNode<CreateSaleData, CreateSaleVariables>
     createSale(input: $input) {
       id
       code
+      subtotal
+      discount
       total
       paid
       debt

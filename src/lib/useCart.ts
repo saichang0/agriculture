@@ -74,5 +74,26 @@ export function useCart() {
 
   const itemCount = useMemo(() => lines.reduce((sum, l) => sum + l.quantity, 0), [lines]);
 
-  return { lines, addProduct, setQuantity, removeLine, clear, loadLines, total, itemCount };
+  // Sums a product's quantity across all of its cart lines (a product can appear as
+  // multiple lines when added in different packaging units), so the product list can
+  // show "already in cart" feedback without callers re-deriving this themselves.
+  const quantityByProductId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const l of lines) {
+      map.set(l.product.id, (map.get(l.product.id) ?? 0) + l.quantity);
+    }
+    return map;
+  }, [lines]);
+
+  return {
+    lines,
+    addProduct,
+    setQuantity,
+    removeLine,
+    clear,
+    loadLines,
+    total,
+    itemCount,
+    quantityByProductId,
+  };
 }

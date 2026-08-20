@@ -80,13 +80,13 @@ export default function NewProductPage() {
     }
   }
 
-  if (loadingRefs) return <LoadingState />;
+  if (loadingRefs && !data) return <LoadingState />;
 
   const categories = data?.categories ?? [];
   const units = data?.units ?? [];
 
   return (
-    <div className="flex min-h-screen flex-col p-8">
+    <div className="flex min-h-screen flex-col p-4 sm:p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-text-primary">ເພີ່ມສິນຄ້າ</h1>
         <p className="mt-1 text-sm text-text-secondary">ຕື່ມຂໍ້ມູນສິນຄ້າໃໝ່</p>
@@ -207,7 +207,7 @@ export default function NewProductPage() {
                   await refetch();
                   return res.createUnit;
                 }}
-              />
+              /> 
             </div>
 
             <div className="h-px bg-border" />

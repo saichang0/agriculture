@@ -17,6 +17,8 @@ export interface Sale {
   customerId: string | null;
   userId: string;
   saleDate: string;
+  subtotal: number;
+  discount: number;
   total: number;
   paid: number;
   debt: number;
@@ -45,6 +47,8 @@ export const SALES_HISTORY_DATA: TypedDocumentNode<SalesHistoryData, Record<stri
       customerId
       userId
       saleDate
+      subtotal
+      discount
       total
       paid
       debt
@@ -86,6 +90,8 @@ export const SALE_BY_ID: TypedDocumentNode<SaleByIdData, SaleByIdVariables> = gq
       customerId
       userId
       saleDate
+      subtotal
+      discount
       total
       paid
       debt
@@ -142,7 +148,7 @@ export interface UpdateSaleData {
 
 export interface UpdateSaleVariables {
   id: string;
-  input: { items: UpdateSaleItemInput[] };
+  input: { items: UpdateSaleItemInput[]; discount?: number | null };
 }
 
 export const UPDATE_SALE: TypedDocumentNode<UpdateSaleData, UpdateSaleVariables> = gql`
@@ -153,6 +159,8 @@ export const UPDATE_SALE: TypedDocumentNode<UpdateSaleData, UpdateSaleVariables>
       customerId
       userId
       saleDate
+      subtotal
+      discount
       total
       paid
       debt

@@ -274,3 +274,67 @@ export const CREATE_UNIT: TypedDocumentNode<CreateUnitData, CreateUnitVariables>
     }
   }
 `;
+
+export interface UpdateCategoryData {
+  updateCategory: Category;
+}
+
+export interface UpdateCategoryVariables {
+  id: string;
+  input: { name: string };
+}
+
+export const UPDATE_CATEGORY: TypedDocumentNode<UpdateCategoryData, UpdateCategoryVariables> = gql`
+  mutation UpdateCategory($id: ID!, $input: UpdateCategory!) {
+    updateCategory(id: $id, input: $input) {
+      id
+      name
+    }
+  }
+`;
+
+export interface DeleteCategoryData {
+  deleteCategory: boolean;
+}
+
+export interface DeleteCategoryVariables {
+  id: string;
+}
+
+export const DELETE_CATEGORY: TypedDocumentNode<DeleteCategoryData, DeleteCategoryVariables> = gql`
+  mutation DeleteCategory($id: ID!) {
+    deleteCategory(id: $id)
+  }
+`;
+
+export interface UpdateUnitData {
+  updateUnit: Unit;
+}
+
+export interface UpdateUnitVariables {
+  id: string;
+  input: { name: string };
+}
+
+export const UPDATE_UNIT: TypedDocumentNode<UpdateUnitData, UpdateUnitVariables> = gql`
+  mutation UpdateUnit($id: ID!, $input: UpdateUnit!) {
+    updateUnit(id: $id, input: $input) {
+      id
+      name
+    }
+  }
+`;
+
+export interface DeleteUnitData {
+  deleteUnit: boolean;
+}
+
+export interface DeleteUnitVariables {
+  id: string;
+}
+
+export const DELETE_UNIT: TypedDocumentNode<DeleteUnitData, DeleteUnitVariables> = gql`
+  mutation DeleteUnit($id: ID!) {
+    deleteUnit(id: $id)
+  }
+`;

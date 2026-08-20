@@ -64,7 +64,7 @@ export default function SaleDetailPage() {
 
   if (error || !sale) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <EmptyState title="ບໍ່ພົບໃບບິນນີ້" description={error?.message} />
       </div>
     );
@@ -77,7 +77,7 @@ export default function SaleDetailPage() {
   const salesperson = userData?.user ? `${userData.user.firstName} ${userData.user.lastName}` : "...";
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 p-8">
+    <div className="flex min-h-screen flex-col gap-6 p-4 sm:p-6">
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -179,8 +179,14 @@ export default function SaleDetailPage() {
         <div className="flex flex-col gap-2 border-t border-border p-6">
           <div className="flex items-center justify-between text-sm">
             <span className="text-text-secondary">ຍອດລວມ</span>
-            <span className="text-text-primary">{formatMoney(sale.total)} ກີບ</span>
+            <span className="text-text-primary">{formatMoney(sale.subtotal)} ກີບ</span>
           </div>
+          {sale.discount > 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-text-secondary">ສ່ວນຫຼຸດ</span>
+              <span className="text-danger">− {formatMoney(sale.discount)} ກີບ</span>
+            </div>
+          )}
           <div className="flex items-center justify-between text-sm">
             <span className="text-text-secondary">ຈ່າຍແລ້ວ</span>
             <span className="text-text-primary">{formatMoney(sale.paid)} ກີບ</span>

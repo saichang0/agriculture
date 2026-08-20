@@ -55,7 +55,7 @@ function IconCamera() {
   );
 }
 
-function ProductNoImage() {
+function ProductNoImage() { 
   return (
     <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-6 w-6 text-text-muted">
       <path
@@ -70,6 +70,8 @@ function ProductNoImage() {
 interface CartContentProps {
   lines: CartLine[];
   total: number;
+  discountStr: string;
+  onDiscountChange: (value: string) => void;
   editSaleId: string | null;
   savingEdit: boolean;
   updateError: { message: string } | null | undefined;
@@ -84,6 +86,8 @@ interface CartContentProps {
 function CartContent({
   lines,
   total,
+  discountStr,
+  onDiscountChange,
   editSaleId,
   savingEdit,
   updateError,
@@ -94,6 +98,8 @@ function CartContent({
   onSaveEdit,
   onCheckout,
 }: CartContentProps) {
+  const discount = Math.min(Number(discountStr) || 0, total);
+  const finalTotal = total - discount;
   return (
     <>
       {editSaleId && (
@@ -176,9 +182,34 @@ function CartContent({
       )}
 
       <div className="shrink-0 border-t border-border p-5">
-        <div className="flex items-center justify-between text-base font-semibold text-text-primary">
+        <div className="flex items-center justify-between text-sm text-text-secondary">
+          <span>ລາຄາລວມ</span>
+          <span className="text-text-primary">{formatMoney(total)} ກີບ</span>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-3">
+          <label htmlFor="cart-discount" className="text-sm text-text-secondary">
+            ສ່ວນຫຼຸດ
+          </label>
+          <div className="flex items-center gap-1.5">
+            <input
+              id="cart-discount"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={total}
+              value={discountStr}
+              onChange={(e) => onDiscountChange(e.target.value)}
+              placeholder="0"
+              className="w-28 rounded-control border border-border bg-surface px-2.5 py-1.5 text-right text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+            />
+            <span className="text-sm text-text-secondary">ກີບ</span>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-base font-semibold text-text-primary">
           <span>ລວມ</span>
-          <span>{formatMoney(total)} ກີບ</span>
+          <span>{formatMoney(finalTotal)} ກີບ</span>
         </div>
         {updateError && (
           <div className="mt-3 rounded-control bg-danger-bg px-3.5 py-2.5 text-sm text-danger">
@@ -225,19 +256,22 @@ export default function SalesPage() {
   });
   const [createCustomer] = useMutation(CREATE_CUSTOMER);
 
-  const [view, setView] = useState<"grid" | "list">("list");
   const [search, setSearch] = useState("");
-  const [categoryId, setCategoryId] = useState<string>("");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [cameraScannerOpen, setCameraScannerOpen] = useState(false);
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [view, setView] = useState<"grid" | "list">("list");
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
   const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const [cameraScannerOpen, setCameraScannerOpen] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
   const [hydratedEditId, setHydratedEditId] = useState<string | null>(null);
-  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const [unitPickerProduct, setUnitPickerProduct] = useState<Product | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
+  const [discountStr, setDiscountStr] = useState("");
 
   const cart = useCart();
+  const discount = Math.min(Number(discountStr) || 0, cart.total);
+  const finalTotal = cart.total - discount;
 
   // When arriving via "?editSale=<id>" from a sale's detail page, load that sale's
   // items into the cart once its data + the product catalog are both ready, so the
@@ -325,6 +359,7 @@ export default function SalesPage() {
   async function handleConfirmCheckout(opts: {
     customerId: string | null;
     paid: number;
+    discount: number;
     paymentMethod: string | null;
     dueDate: string | null;
   }) {
@@ -334,6 +369,7 @@ export default function SalesPage() {
           customerId: opts.customerId,
           items: cart.lines.map((l) => ({ productId: l.product.id, quantity: l.quantity, unitId: l.unitId })),
           paid: opts.paid,
+          discount: opts.discount,
           paymentMethod: opts.paymentMethod,
           dueDate: opts.dueDate,
         },
@@ -343,6 +379,7 @@ export default function SalesPage() {
       setSuccessToast(`ຂາຍສຳເລັດ! ໃບບິນ ${data.createSale.code}`);
       setTimeout(() => setSuccessToast(null), 3000);
       cart.clear();
+      setDiscountStr("");
       setCheckoutOpen(false);
     }
   }
@@ -359,12 +396,14 @@ export default function SalesPage() {
     });
     if (data?.updateSale) {
       cart.clear();
+      setDiscountStr("");
       router.push(`/reports/history/${editSaleId}`);
     }
   }
 
   function handleCancelEdit() {
     cart.clear();
+    setDiscountStr("");
     router.push(`/reports/history/${editSaleId}`);
   }
 
@@ -436,43 +475,53 @@ export default function SalesPage() {
           <EmptyState title="ບໍ່ພົບສິນຄ້າ" />
         ) : view === "grid" ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {filtered.map((p) => (
-              <div
-                key={p.id}
-                role="button"
-                tabIndex={p.stockQty <= 0 ? -1 : 0}
-                onClick={() => handleProductClick(p)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") handleProductClick(p);
-                }}
-                aria-disabled={p.stockQty <= 0}
-                className="flex flex-col overflow-hidden rounded-card border border-border bg-surface text-left transition-shadow hover:shadow-md aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (p.imageUrl) setPreviewImage({ src: p.imageUrl, alt: p.name });
+            {filtered.map((p) => {
+              const inCartQty = cart.quantityByProductId.get(p.id) ?? 0;
+              return (
+                <div
+                  key={p.id}
+                  role="button"
+                  tabIndex={p.stockQty <= 0 ? -1 : 0}
+                  onClick={() => handleProductClick(p)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") handleProductClick(p);
                   }}
-                  className="flex aspect-square items-center justify-center bg-surface-muted"
+                  aria-disabled={p.stockQty <= 0}
+                  className={`relative flex flex-col overflow-hidden rounded-card border text-left transition-shadow hover:shadow-md aria-disabled:cursor-not-allowed aria-disabled:opacity-50 ${
+                    inCartQty > 0 ? "border-primary bg-surface-muted" : "border-border bg-surface"
+                  }`}
                 >
-                  {p.imageUrl ? (
-                    <Image src={p.imageUrl} alt={p.name} width={160} height={160} className="h-full w-full object-cover" />
-                  ) : (
-                    <ProductNoImage />
+                  {inCartQty > 0 && (
+                    <span className="absolute right-2 top-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-text">
+                      {inCartQty}
+                    </span>
                   )}
-                </button>
-                <div className="flex flex-col gap-1 p-3">
-                  <span className="truncate text-sm font-medium text-text-primary">{p.name}</span>
-                  <span className="text-sm text-text-secondary">{formatMoney(p.retailPrice)} ກີບ</span>
-                  {p.stockQty <= 0 ? (
-                    <Badge tone="danger">ໝົດ</Badge>
-                  ) : p.stockQty <= p.minStockAlert ? (
-                    <Badge tone="warning">ໃກ້ໝົດ</Badge>
-                  ) : null}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (p.imageUrl) setPreviewImage({ src: p.imageUrl, alt: p.name });
+                    }}
+                    className="flex aspect-square items-center justify-center bg-surface-muted"
+                  >
+                    {p.imageUrl ? (
+                      <Image src={p.imageUrl} alt={p.name} width={160} height={160} className="h-full w-full object-cover" />
+                    ) : (
+                      <ProductNoImage />
+                    )}
+                  </button>
+                  <div className="flex flex-col gap-1 p-3">
+                    <span className="truncate text-sm font-medium text-text-primary">{p.name}</span>
+                    <span className="text-sm text-text-secondary">{formatMoney(p.retailPrice)} ກີບ</span>
+                    {p.stockQty <= 0 ? (
+                      <Badge tone="danger">ໝົດ</Badge>
+                    ) : p.stockQty <= p.minStockAlert ? (
+                      <Badge tone="warning">ໃກ້ໝົດ</Badge>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="overflow-x-auto rounded-card border border-border bg-surface">
@@ -487,68 +536,80 @@ export default function SalesPage() {
                 <div className="hidden w-24 shrink-0 text-right sm:block">ສະຖານະ</div>
               </div>
 
-              {filtered.map((p) => (
-                <div
-                  key={p.id}
-                  role="button"
-                  tabIndex={p.stockQty <= 0 ? -1 : 0}
-                  onClick={() => handleProductClick(p)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") handleProductClick(p);
-                  }}
-                  aria-disabled={p.stockQty <= 0}
-                  className="flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-0 hover:bg-surface-muted aria-disabled:cursor-not-allowed aria-disabled:opacity-50 sm:gap-4 sm:px-4"
-                >
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (p.imageUrl) setPreviewImage({ src: p.imageUrl, alt: p.name });
+              {filtered.map((p) => {
+                const inCartQty = cart.quantityByProductId.get(p.id) ?? 0;
+                return (
+                  <div
+                    key={p.id}
+                    role="button"
+                    tabIndex={p.stockQty <= 0 ? -1 : 0}
+                    onClick={() => handleProductClick(p)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") handleProductClick(p);
                     }}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-surface-muted"
+                    aria-disabled={p.stockQty <= 0}
+                    className={`flex w-full items-center gap-3 border-b border-border px-3 py-3 text-left transition-colors last:border-0 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 sm:gap-4 sm:px-4 ${
+                      inCartQty > 0 ? "bg-surface-muted hover:bg-surface-muted" : "hover:bg-surface-muted"
+                    }`}
                   >
-                    {p.imageUrl ? (
-                      <Image src={p.imageUrl} alt={p.name} width={44} height={44} className="h-full w-full object-cover" />
-                    ) : (
-                      <ProductNoImage />
-                    )}
-                  </button>
-                  <div className="flex w-40 min-w-0 flex-1 flex-col gap-0.5 sm:w-56 sm:flex-none">
-                    <span className="text-sm font-medium text-text-primary sm:whitespace-normal">{p.name}</span>
-                    <span className="text-xs text-text-secondary sm:hidden">
-                      {categoryById.get(p.categoryId) ?? "-"}
-                    </span>
-                  </div>
-                  <div className="hidden w-32 shrink-0 text-right md:block">
-                    <span className="truncate text-xs text-text-secondary">
-                      {categoryById.get(p.categoryId) ?? "-"}
-                    </span>
-                  </div>
-                  <div className="w-24 shrink-0 text-right text-sm font-semibold text-text-primary sm:w-32">
-                    {formatMoney(p.retailPrice)} ກີບ
-                  </div>
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (p.imageUrl) setPreviewImage({ src: p.imageUrl, alt: p.name });
+                        }}
+                        className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-control bg-surface-muted"
+                      >
+                        {p.imageUrl ? (
+                          <Image src={p.imageUrl} alt={p.name} width={44} height={44} className="h-full w-full object-cover" />
+                        ) : (
+                          <ProductNoImage />
+                        )}
+                      </button>
+                      {inCartQty > 0 && (
+                        <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-semibold text-primary-text">
+                          {inCartQty}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex w-40 min-w-0 flex-1 flex-col gap-0.5 sm:w-56 sm:flex-none">
+                      <span className="text-sm font-medium text-text-primary sm:whitespace-normal">{p.name}</span>
+                      <span className="text-xs text-text-secondary sm:hidden">
+                        {categoryById.get(p.categoryId) ?? "-"}
+                      </span>
+                    </div>
+                    <div className="hidden w-32 shrink-0 text-right md:block">
+                      <span className="truncate text-xs text-text-secondary">
+                        {categoryById.get(p.categoryId) ?? "-"}
+                      </span>
+                    </div>
+                    <div className="w-24 shrink-0 text-right text-sm font-semibold text-text-primary sm:w-32">
+                      {formatMoney(p.retailPrice)} ກີບ
+                    </div>
 
-                  <div className="hidden w-32 shrink-0 text-right text-xs text-text-secondary md:block">
-                    {formatMoney(p.wholesalePrice)} ກີບ
-                    <br />
-                    (≥{p.wholesaleMinQty} ຫົວໜ່ວຍ)
-                  </div>
+                    <div className="hidden w-32 shrink-0 text-right text-xs text-text-secondary md:block">
+                      {formatMoney(p.wholesalePrice)} ກີບ
+                      <br />
+                      (≥{p.wholesaleMinQty} ຫົວໜ່ວຍ)
+                    </div>
 
-                  <div className="w-16 shrink-0 text-right text-sm text-text-primary sm:w-28">
-                    {formatMoney(p.stockQty)}
-                  </div>
+                    <div className="w-16 shrink-0 text-right text-sm text-text-primary sm:w-28">
+                      {formatMoney(p.stockQty)}
+                    </div>
 
-                  <div className="hidden w-24 shrink-0 justify-end sm:flex">
-                    {p.stockQty <= 0 ? (
-                      <Badge tone="danger">ໝົດ</Badge>
-                    ) : p.stockQty <= p.minStockAlert ? (
-                      <Badge tone="warning">ໃກ້ໝົດ</Badge>
-                    ) : (
-                      <Badge tone="success">ພ້ອມຂາຍ</Badge>
-                    )}
+                    <div className="hidden w-24 shrink-0 justify-end sm:flex">
+                      {p.stockQty <= 0 ? (
+                        <Badge tone="danger">ໝົດ</Badge>
+                      ) : p.stockQty <= p.minStockAlert ? (
+                        <Badge tone="warning">ໃກ້ໝົດ</Badge>
+                      ) : (
+                        <Badge tone="success">ພ້ອມຂາຍ</Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -561,6 +622,8 @@ export default function SalesPage() {
         <CartContent
           lines={cart.lines}
           total={cart.total}
+          discountStr={discountStr}
+          onDiscountChange={setDiscountStr}
           editSaleId={editSaleId}
           savingEdit={savingEdit}
           updateError={updateError}
@@ -580,7 +643,7 @@ export default function SalesPage() {
         className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between border-t border-border bg-sidebar-bg px-5 py-4 text-white shadow-lg lg:hidden"
       >
         <span className="text-sm font-medium">
-          ກະຕ່າ ({cart.itemCount}) — {formatMoney(cart.total)} ກີບ
+          ກະຕ່າ ({cart.itemCount}) — {formatMoney(finalTotal)} ກີບ
         </span>
         <span className="text-sm font-semibold underline">ເປີດ</span>
       </button>
@@ -601,6 +664,8 @@ export default function SalesPage() {
             <CartContent
               lines={cart.lines}
               total={cart.total}
+              discountStr={discountStr}
+              onDiscountChange={setDiscountStr}
               editSaleId={editSaleId}
               savingEdit={savingEdit}
               updateError={updateError}
@@ -625,7 +690,8 @@ export default function SalesPage() {
 
       <CheckoutDialog
         open={checkoutOpen}
-        total={cart.total}
+        subtotal={cart.total}
+        discount={discount}
         customers={salesData?.customers ?? []}
         loading={checkingOut}
         error={saleError?.message ?? null}

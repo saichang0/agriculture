@@ -10,6 +10,7 @@ export interface ReportSale {
   id: string;
   saleDate: string;
   paymentStatus: string;
+  discount: number;
   total: number;
   debt: number;
   items: ReportSaleItem[];
@@ -29,6 +30,7 @@ export const SALES_REPORT_DATA: TypedDocumentNode<SalesReportData, Record<string
       id
       saleDate
       paymentStatus
+      discount
       total
       debt
       items {

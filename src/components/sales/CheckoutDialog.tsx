@@ -6,7 +6,9 @@ import { CustomerPickerDialog } from "./CustomerPickerDialog";
 
 interface CheckoutDialogProps {
   open: boolean;
-  total: number;
+  /** Subtotal before discount — the discount itself is set in the cart panel, not here. */
+  subtotal: number;
+  discount: number;
   customers: Customer[];
   loading: boolean;
   error: string | null;
@@ -14,6 +16,7 @@ interface CheckoutDialogProps {
   onConfirm: (opts: {
     customerId: string | null;
     paid: number;
+    discount: number;
     paymentMethod: string | null;
     dueDate: string | null;
   }) => void;
@@ -28,7 +31,8 @@ const NUMPAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫
 
 export function CheckoutDialog({
   open,
-  total,
+  subtotal,
+  discount,
   customers,
   loading,
   error,
@@ -60,6 +64,8 @@ export function CheckoutDialog({
 
   if (!open) return null;
 
+  const total = subtotal - discount;
+
   const paid = Math.min(Number(paidStr) || 0, total);
   const change = Math.max((Number(paidStr) || 0) - total, 0);
   const debt = Math.max(total - paid, 0);
@@ -82,7 +88,7 @@ export function CheckoutDialog({
   function handleReceivePayment() {
     // The customer is paying in full regardless of exact cash tendered — the numpad
     // here is only used to calculate change, not to determine what gets recorded.
-    onConfirm({ customerId: null, paid: total, paymentMethod, dueDate: null });
+    onConfirm({ customerId: null, paid: total, discount, paymentMethod, dueDate: null });
   }
 
   function handleExactAmount() {
@@ -104,6 +110,7 @@ export function CheckoutDialog({
     onConfirm({
       customerId: selectedCustomer.id,
       paid,
+      discount,
       paymentMethod,
       dueDate: dueDate || null,
     });
@@ -126,6 +133,13 @@ export function CheckoutDialog({
               ✕
             </button>
           </div>
+
+          {discount > 0 && (
+            <div className="flex items-center justify-between border-b border-border bg-surface-muted px-5 py-2 text-sm">
+              <span className="text-text-secondary">ລາຄາລວມ {formatMoney(subtotal)} ກີບ</span>
+              <span className="font-medium text-danger">ຫຼຸດ {formatMoney(discount)} ກີບ</span>
+            </div>
+          )}
 
           {/* Payment method tabs */}
           <div className="flex border-b border-border">
@@ -220,13 +234,6 @@ export function CheckoutDialog({
               </>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-text-secondary">ຍອດລວມ</span>
-                  <span className="text-2xl font-semibold text-text-primary">
-                    {formatMoney(total)} ກີບ
-                  </span>
-                </div>
-
                 <span className="text-sm font-medium text-text-secondary">ຮັບເງິນມາ</span>
 
                 {/* Amount tendered display */}

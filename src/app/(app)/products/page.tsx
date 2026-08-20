@@ -100,14 +100,14 @@ export default function ProductsPage() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <EmptyState title="ບໍ່ສາມາດໂຫຼດຂໍ້ມູນໄດ້" description={error.message} />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 p-8">
+    <div className="flex min-h-screen flex-col gap-6 p-4 sm:p-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">ສິນຄ້າ</h1>

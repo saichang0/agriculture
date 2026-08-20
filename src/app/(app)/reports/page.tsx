@@ -39,7 +39,7 @@ export default function ReportsOverviewPage() {
     const damaged = (data?.damagedProducts ?? []).filter((d) => inRange(d.date, dateRange));
 
     const salesRevenue = sales.reduce(
-      (sum, s) => sum + s.items.reduce((itemSum, i) => itemSum + i.subtotal, 0),
+      (sum, s) => sum + s.items.reduce((itemSum, i) => itemSum + i.subtotal, 0) - s.discount,
       0
     );
     const salesCost = sales.reduce(
@@ -62,14 +62,14 @@ export default function ReportsOverviewPage() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6">
         <EmptyState title="ບໍ່ສາມາດໂຫຼດຂໍ້ມູນໄດ້" description={error.message} />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col gap-6 p-8">
+    <div className="flex min-h-screen flex-col gap-6 p-4 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">ລາຍງານ - ພາບລວມ</h1>
