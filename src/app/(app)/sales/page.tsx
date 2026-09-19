@@ -67,6 +67,48 @@ function ProductNoImage() {
   );
 }
 
+function QuantityInput({
+  quantity,
+  onSetQuantity,
+}: {
+  quantity: number;
+  onSetQuantity: (quantity: number) => void;
+}) {
+  const [value, setValue] = useState(String(quantity));
+
+  useEffect(() => {
+    setValue(String(quantity));
+  }, [quantity]);
+
+  function handleChange(nextValue: string) {
+    if (!/^\d*$/.test(nextValue)) return;
+    setValue(nextValue);
+    const nextQuantity = Number(nextValue);
+    if (nextQuantity > 0) onSetQuantity(nextQuantity);
+  }
+
+  function handleBlur() {
+    const nextQuantity = Number(value);
+    if (!Number.isInteger(nextQuantity) || nextQuantity <= 0) {
+      setValue(String(quantity));
+    }
+  }
+
+  return (
+    <input
+      type="number"
+      min={1}
+      step={1}
+      inputMode="numeric"
+      aria-label="ຈຳນວນສິນຄ້າ"
+      value={value}
+      onChange={(event) => handleChange(event.target.value)}
+      onBlur={handleBlur}
+      className="h-6 w-12 rounded-control border border-border bg-surface px-1 text-center text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+    />
+  );
+}
+
 interface CartContentProps {
   lines: CartLine[];
   total: number;
@@ -151,7 +193,10 @@ function CartContent({
                         >
                           −
                         </button>
-                        <span className="w-5 text-center text-sm text-text-primary">{line.quantity}</span>
+                        <QuantityInput
+                          quantity={line.quantity}
+                          onSetQuantity={(quantity) => onSetQuantity(line.product.id, line.unitId, quantity)}
+                        />
                         <button
                           type="button"
                           onClick={() => onSetQuantity(line.product.id, line.unitId, line.quantity + 1)}
